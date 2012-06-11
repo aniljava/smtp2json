@@ -6,9 +6,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.net.Socket;
+import java.net.SocketException;
 import java.security.KeyStore;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
@@ -37,9 +40,7 @@ public class MailServer implements MessageHandlerFactory {
 		readConfiguration();
 		this.dataFolder = getConfiguration("data_folder", "data/");
 		new File(dataFolder).mkdirs();
-		this.url = getConfiguration("url", null);
-		
-		
+		this.url = getConfiguration("url", null);		
 		
 		
 		SMTPServer server = null;
@@ -51,13 +52,13 @@ public class MailServer implements MessageHandlerFactory {
 			server = new SMTPServer(this){
 				@Override
 				public String getName(){
-					return getConfiguration("name", "smtp2json");
+					return getConfiguration("name", "SMTP2JSON");
 				}
 			};
 		}
 		
 		
-		String hostName = getConfiguration("host_name", "NA");
+		String hostName = getConfiguration("host_name", getMachineName());
 		String bindAddress = getConfiguration("bind_address", null);
 		
 		server.setHostName(hostName);
@@ -69,7 +70,9 @@ public class MailServer implements MessageHandlerFactory {
 		server.setPort(25);
 		server.setRequireTLS(false);
 		server.start();
-		server.setMaxMessageSize(0);
+		
+		final int max_size = Integer.parseInt(getConfiguration("max_message_length", (1024 * 1024) + ""));		
+		server.setMaxMessageSize(max_size);
 	}
 
 	private SMTPServer getSSLServer() throws Exception {
@@ -88,7 +91,7 @@ public class MailServer implements MessageHandlerFactory {
 		final SMTPServer smtpServer = new SMTPServer(this) {
 			@Override
 			public String getName(){
-				return getConfiguration("name", "SMTP2JSON");
+				return getConfiguration("name", "SMTP2JSON/TLS");
 			}
 			
 			@Override
@@ -124,7 +127,7 @@ public class MailServer implements MessageHandlerFactory {
 	
 	@Override
 	public MessageHandler create(MessageContext ctx) {
-		return new Mailet(ctx,this.dataFolder,url);		
+		return new Mailet(url);		
 	}
 	
     public static final String[] ENABLED_PROTOCOLS = new String[] {
@@ -159,6 +162,29 @@ public class MailServer implements MessageHandlerFactory {
 	    return intersection.toArray(new String[intersection.size()]);
 	}
 	
-	
+	private static String getMachineName() throws SocketException {
+		String name = null;
+		Enumeration<NetworkInterface> enet = NetworkInterface.getNetworkInterfaces();
+
+		while (enet.hasMoreElements() && (name == null)) {
+			NetworkInterface net = enet.nextElement();
+
+			if (net.isLoopback())
+				continue;
+
+			Enumeration<InetAddress> eaddr = net.getInetAddresses();
+
+			while (eaddr.hasMoreElements()) {
+				InetAddress inet = eaddr.nextElement();
+
+				if (inet.getCanonicalHostName().equalsIgnoreCase(inet.getHostAddress()) == false) {
+					name = inet.getCanonicalHostName();
+					break;
+				}
+			}
+		}
+
+		return name;
+	}	
 
 }
