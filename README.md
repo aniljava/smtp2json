@@ -12,10 +12,11 @@ Inbound SMTP Server - Forwards parsed JSON over HTTP
 
 ### Installation
 
- java -jar smtp2json-1.0-jar-with-dependencies.jar
+   java -jar smtp2json-1.0-jar-with-dependencies.jar
  
  #from source
- mvn package
+ 
+    mvn package
     
 ### Specification
 #### JSON Specification
