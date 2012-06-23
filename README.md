@@ -78,4 +78,10 @@ Following fields are added
 
 Headers, To, From, Subject are copied as they are. Nested body's headers are copied in nexted body and named body0, body1 ...
 
+### TODO
+1. Per address or per domain rules, Forwarding to URL, forwarding to Mailet (Which forwards to email, another SMTP Server ...)
+	address.txt to address.json {"domain":"example.com", "action":"smtp2json.POSTForward", "args": [["http://..."]]}
+2. Auto Reload Domain list
+3. Revise JSON Format for next version.
+
 
