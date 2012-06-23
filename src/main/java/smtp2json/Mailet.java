@@ -19,16 +19,23 @@ import org.subethamail.smtp.TooMuchDataException;
 /**
  * Handles individual Messages. Parses and calls web application.
  * 
- * @author Anil
+ * @author Anil Pathak
  * 
  */
 public class Mailet implements MessageHandler {
 
-	private String	url;
-	private String	from;
-	private String	to;
+	private String			url;
+	private String			from;
+	private String			to;
+
+	private DomainsFilter	filter	= null;
 
 	public Mailet(String url) {
+		this.url = url;
+	}
+
+	public Mailet(String url, DomainsFilter filter) {
+		this.filter = filter;
 		this.url = url;
 	}
 
@@ -39,14 +46,19 @@ public class Mailet implements MessageHandler {
 
 	@Override
 	public void recipient(String to) throws RejectException {
+		if(filter != null){
+			if(! filter.accept(to)){
+				throw new RejectException();
+			}
+		}
 		this.to = to;
 	}
-	
-	MimeToJson jsonParser;
-	
+
+	MimeToJson	jsonParser;
+
 	@Override
-	public void data(InputStream in) throws RejectException, TooMuchDataException, IOException {		
-		jsonParser = new MimeToJson(in);		
+	public void data(InputStream in) throws RejectException, TooMuchDataException, IOException {
+		jsonParser = new MimeToJson(in);
 	}
 
 	DefaultHttpClient			httpclient	= new DefaultHttpClient();
@@ -59,8 +71,8 @@ public class Mailet implements MessageHandler {
 				return;
 			if (from == null || to == null)
 				return; // Do nothing
-			
-			if(jsonParser == null){
+
+			if (jsonParser == null) {
 				return;
 			}
 

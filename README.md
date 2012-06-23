@@ -8,22 +8,22 @@ Inbound SMTP Server - Forwards parsed JSON over HTTP
 - Standalone
 - TLS Support
 - Email parsing to extract txt/plain, txt/html and binary attachments
+- Simple domain based email filtering
 
 
 ### Installation
 
-   java -jar smtp2json-1.0-jar-with-dependencies.jar
+    java -jar smtp2json-1.0-jar-with-dependencies.jar
  
- #from source
+*from source*
  
     mvn package
-    
-### Specification
+
+
+### Reference
 #### JSON Specification
 #### JSON Client Reference
 #### Configuration
 #### SSL Configuration
 
 ### TODO
-
-- Implement Regex or domain only email filtering so that the server does not appear as a open relay

@@ -26,52 +26,62 @@ import org.subethamail.smtp.MessageHandler;
 import org.subethamail.smtp.MessageHandlerFactory;
 import org.subethamail.smtp.server.SMTPServer;
 
+/**
+ * Main class
+ * 
+ * @author Anil Pathak
+ * 
+ */
 public class MailServer implements MessageHandlerFactory {
 
-	public static void main(String[] args) throws Exception {				
+	public static void main(String[] args) throws Exception {
 		new MailServer().start();
 	}
 
-	private Properties	configuration;
-	private String		dataFolder;
-	private String		url;
-	
+	private Properties		configuration;
+	private String			dataFolder;
+	private String			url;
+	private DomainsFilter	filter	= new DomainsFilter();
+
 	public void start() throws Exception {
 		readConfiguration();
 		this.dataFolder = getConfiguration("data_folder", "data/");
 		new File(dataFolder).mkdirs();
-		this.url = getConfiguration("url", null);		
-		
-		
+		this.url = getConfiguration("url", null);
+
+		String domainsFile = getConfiguration("domains_list_file", "");
+		if (domainsFile.length() > 0) {
+			filter.init(domainsFile);
+		}
+
 		SMTPServer server = null;
-		
+
 		final String ssl_enabled = configuration.getProperty("ssl_enabled");
+
 		if (ssl_enabled != null && "true".equals(ssl_enabled)) {
 			server = getSSLServer();
-		}else{
-			server = new SMTPServer(this){
+		} else {
+			server = new SMTPServer(this) {
 				@Override
-				public String getName(){
+				public String getName() {
 					return getConfiguration("name", "SMTP2JSON");
 				}
 			};
 		}
-		
-		
+
 		String hostName = getConfiguration("host_name", getMachineName());
 		String bindAddress = getConfiguration("bind_address", null);
-		
+
 		server.setHostName(hostName);
-		if(bindAddress != null){
+		if (bindAddress != null) {
 			server.setBindAddress(InetAddress.getByName(bindAddress));
-		}//Else all interfaces.
-		
-		
+		}// Else all interfaces.
+
 		server.setPort(25);
 		server.setRequireTLS(false);
 		server.start();
-		
-		final int max_size = Integer.parseInt(getConfiguration("max_message_length", (1024 * 1024) + ""));		
+
+		final int max_size = Integer.parseInt(getConfiguration("max_message_length", (1024 * 1024) + ""));
 		server.setMaxMessageSize(max_size);
 	}
 
@@ -90,10 +100,10 @@ public class MailServer implements MessageHandlerFactory {
 
 		final SMTPServer smtpServer = new SMTPServer(this) {
 			@Override
-			public String getName(){
+			public String getName() {
 				return getConfiguration("name", "SMTP2JSON/TLS");
 			}
-			
+
 			@Override
 			public SSLSocket createSSLSocket(Socket socket) throws IOException {
 				final InetSocketAddress remoteAddress = (InetSocketAddress) socket.getRemoteSocketAddress();
@@ -124,44 +134,21 @@ public class MailServer implements MessageHandlerFactory {
 		properties.load(new FileInputStream("config.properties"));
 		this.configuration = properties;
 	}
-	
+
 	@Override
 	public MessageHandler create(MessageContext ctx) {
-		return new Mailet(url);		
+		return new Mailet(url,this.filter);
 	}
-	
-    public static final String[] ENABLED_PROTOCOLS = new String[] {
-        "SSLv3",
-        "TLSv1",
-        "TLSv1.1",
-        "SSLv2Hello",
-    };
-    public static final String[] ENABLED_CIPHER_SUITES = new String[] {
-        "TLS_RSA_WITH_DES_CBC_SHA",
-        "TLS_DHE_DSS_WITH_DES_CBC_SHA",
-        "TLS_DHE_RSA_WITH_DES_CBC_SHA",
-        "TLS_DHE_DSS_EXPORT1024_WITH_DES_CBC_SHA",
-        "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
-        "TLS_RSA_WITH_RC4_128_SHA",
-        "TLS_RSA_WITH_RC4_128_MD5",
-        "TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA",
-        "TLS_DHE_DSS_WITH_RC4_128_SHA",
-        "TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA", 
-        "SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA",
-        "SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA",
-        "TLS_RSA_WITH_AES_128_CBC_SHA",
-        "TLS_RSA_WITH_AES_256_CBC_SHA",
-        "SSL_RSA_WITH_3DES_EDE_CBC_SHA",
-        "SSL_RSA_WITH_RC4_128_MD5",
-        "SSL_RSA_WITH_RC4_128_SHA",           
-	};
-	
+
+	public static final String[]	ENABLED_PROTOCOLS		= new String[] { "SSLv3", "TLSv1", "TLSv1.1", "SSLv2Hello", };
+	public static final String[]	ENABLED_CIPHER_SUITES	= new String[] { "TLS_RSA_WITH_DES_CBC_SHA", "TLS_DHE_DSS_WITH_DES_CBC_SHA", "TLS_DHE_RSA_WITH_DES_CBC_SHA", "TLS_DHE_DSS_EXPORT1024_WITH_DES_CBC_SHA", "TLS_RSA_WITH_3DES_EDE_CBC_SHA", "TLS_RSA_WITH_RC4_128_SHA", "TLS_RSA_WITH_RC4_128_MD5", "TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA", "TLS_DHE_DSS_WITH_RC4_128_SHA", "TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA", "SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA", "SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA", "TLS_RSA_WITH_AES_128_CBC_SHA", "TLS_RSA_WITH_AES_256_CBC_SHA", "SSL_RSA_WITH_3DES_EDE_CBC_SHA", "SSL_RSA_WITH_RC4_128_MD5", "SSL_RSA_WITH_RC4_128_SHA", };
+
 	public static String[] intersection(String[] stringSetA, String[] stringSetB) {
-	    Set<String> intersection = new HashSet<String>(Arrays.asList(stringSetA));
-	    intersection.retainAll(Arrays.asList(stringSetB));
-	    return intersection.toArray(new String[intersection.size()]);
+		Set<String> intersection = new HashSet<String>(Arrays.asList(stringSetA));
+		intersection.retainAll(Arrays.asList(stringSetB));
+		return intersection.toArray(new String[intersection.size()]);
 	}
-	
+
 	private static String getMachineName() throws SocketException {
 		String name = null;
 		Enumeration<NetworkInterface> enet = NetworkInterface.getNetworkInterfaces();
@@ -185,6 +172,6 @@ public class MailServer implements MessageHandlerFactory {
 		}
 
 		return name;
-	}	
+	}
 
 }
