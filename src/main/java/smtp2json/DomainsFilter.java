@@ -26,7 +26,7 @@ public class DomainsFilter {
 	 * @return true if the domain exists false otherwise.
 	 */
 	public boolean accept(String email) {
-		String domain = getDomain(email);
+		String domain = getDomain(email);		
 		return domains.contains(domain);
 	}
 
@@ -38,12 +38,12 @@ public class DomainsFilter {
 	 *            File containing domain names seperated by new line.
 	 * @throws IOException
 	 */
-	public void init(String domainsFile) throws IOException {
+	public void init(String domainsFile) throws IOException {		
 		BufferedReader reader = new BufferedReader(new FileReader(domainsFile));
 		String domain = null;
 
-		while ((domain = reader.readLine().trim()) != null) {
-			domains.add(domain);
+		while ((domain = reader.readLine()) != null) {
+			domains.add(domain);			
 		}
 		reader.close();
 	}
