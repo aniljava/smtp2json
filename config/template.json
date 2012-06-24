@@ -1,0 +1,4 @@
+{
+	"domain":"__host__",
+	"processors":[["logger"],["backup", "backup"],["postjson", "__url__"]]
+}
