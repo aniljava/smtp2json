@@ -2,6 +2,7 @@ package smtp2json;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -41,6 +42,9 @@ public class MimeToJson {
 		return mapper.writeValueAsString(map);
 	}
 
+	/**
+	 * Recursive method that converts given MIME Entity to JSON
+	 */
 	private void process(Entity entity, Map<String, Object> map) throws IOException {
 
 		Header headers = entity.getHeader();
@@ -159,6 +163,12 @@ public class MimeToJson {
 		if (buffer == null)
 			return "";
 		return buffer.toString();
+	}
+	
+	public static void main(String[] args) throws Exception {
+		MimeToJson mj = new MimeToJson(new FileInputStream("test-email.txt"));
+		String json = mj.getJson();
+		System.out.println(json);
 	}
 
 }

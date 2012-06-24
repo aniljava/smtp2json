@@ -2,15 +2,11 @@ package smtp2json;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.UUID;
 
-import org.apache.http.NameValuePair;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
+import javax.mail.internet.InternetAddress;
+
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.message.BasicNameValuePair;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.subethamail.smtp.MessageHandler;
 import org.subethamail.smtp.RejectException;
@@ -24,19 +20,14 @@ import org.subethamail.smtp.TooMuchDataException;
  */
 public class Mailet implements MessageHandler {
 
-	private String			url;
-	private String			from;
-	private String			to;
+	private String				from;
+	private String				to;
+	private String				domain;
+	private String				id = UUID.randomUUID().toString();
+	private ProcessorDispatcher	processor	= null;
 
-	private DomainsFilter	filter	= null;
-
-	public Mailet(String url) {
-		this.url = url;
-	}
-
-	public Mailet(String url, DomainsFilter filter) {
-		this.filter = filter;
-		this.url = url;
+	public Mailet(ProcessorDispatcher filter) {
+		this.processor = filter;
 	}
 
 	@Override
@@ -46,10 +37,9 @@ public class Mailet implements MessageHandler {
 
 	@Override
 	public void recipient(String to) throws RejectException {
-		if(filter != null){
-			if(! filter.accept(to)){
-				throw new RejectException();
-			}
+		this.domain = getDomain(to);
+		if (!processor.process(domain)) {
+			throw new RejectException();
 		}
 		this.to = to;
 	}
@@ -58,7 +48,13 @@ public class Mailet implements MessageHandler {
 
 	@Override
 	public void data(InputStream in) throws RejectException, TooMuchDataException, IOException {
-		jsonParser = new MimeToJson(in);
+		try {
+			processor.process(in, domain, from, to, id, null);
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new IOException("Could not process email");
+		}
+
 	}
 
 	DefaultHttpClient			httpclient	= new DefaultHttpClient();
@@ -66,31 +62,18 @@ public class Mailet implements MessageHandler {
 
 	@Override
 	public void done() {
-		try {
-			if (url == null)
-				return;
-			if (from == null || to == null)
-				return; // Do nothing
-
-			if (jsonParser == null) {
-				return;
-			}
-
-			String json = jsonParser.getJson();
-			HttpPost post = new HttpPost(url);
-
-			List<NameValuePair> formparams = new ArrayList<NameValuePair>();
-			formparams.add(new BasicNameValuePair("data", json));
-
-			UrlEncodedFormEntity entity = new UrlEncodedFormEntity(formparams, Charset.defaultCharset().name());
-			post.setHeader("Content-Type", "application/x-www-form-urlencoded");
-			post.setEntity(entity);
-
-			httpclient.execute(post);
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-
+		// DONE !!
 	}
 
+	private static String getDomain(String email) {
+		try {
+			InternetAddress emailAddr = new InternetAddress(email);
+			String domain = emailAddr.getAddress().toString();
+			domain = domain.substring(domain.indexOf("@") + 1);
+
+			return domain;
+		} catch (Exception ex) {
+			throw new RuntimeException(email + "NOT VALIDATED");
+		}
+	}
 }

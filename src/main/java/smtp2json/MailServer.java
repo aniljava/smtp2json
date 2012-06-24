@@ -1,6 +1,5 @@
 package smtp2json;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,7 +26,8 @@ import org.subethamail.smtp.MessageHandlerFactory;
 import org.subethamail.smtp.server.SMTPServer;
 
 /**
- * Main class
+ * Main Server class. It starts a server socket. Initialize the @ProcessorDispatcher
+ * and loops for new connection.
  * 
  * @author Anil Pathak
  * 
@@ -38,27 +38,20 @@ public class MailServer implements MessageHandlerFactory {
 		new MailServer().start();
 	}
 
-	private Properties		configuration;
-	private String			dataFolder;
-	private String			url;
-	private DomainsFilter	filter	= new DomainsFilter();
+	private Properties			configuration	= new Properties();
+	private ProcessorDispatcher	processor		= new ProcessorDispatcher();
 
 	public void start() throws Exception {
-		readConfiguration();
-		this.dataFolder = getConfiguration("data_folder", "data/");
-		new File(dataFolder).mkdirs();
-		this.url = getConfiguration("url", null);
+		reloadConfiguration();
 
-		String domainsFile = getConfiguration("domains_list_file", "");
-		if (domainsFile.length() > 0) {
-			filter.init(domainsFile);
-		}
+		String processorConfigDir = getConfiguration("processor_config_dir", "config");
+		processor.init(processorConfigDir);
 
 		SMTPServer server = null;
 
-		final String ssl_enabled = configuration.getProperty("ssl_enabled");
+		final String ssl_enabled = getConfiguration("ssl_enabled", "false");
 
-		if (ssl_enabled != null && "true".equals(ssl_enabled)) {
+		if ("true".equals(ssl_enabled)) {
 			server = getSSLServer();
 		} else {
 			server = new SMTPServer(this) {
@@ -129,7 +122,7 @@ public class MailServer implements MessageHandlerFactory {
 		return (value == null || "".equals(value)) ? ifnull : value;
 	}
 
-	private void readConfiguration() throws IOException {
+	private void reloadConfiguration() throws IOException {
 		Properties properties = new Properties();
 		properties.load(new FileInputStream("config.properties"));
 		this.configuration = properties;
@@ -137,7 +130,7 @@ public class MailServer implements MessageHandlerFactory {
 
 	@Override
 	public MessageHandler create(MessageContext ctx) {
-		return new Mailet(url,this.filter);
+		return new Mailet(this.processor);
 	}
 
 	public static final String[]	ENABLED_PROTOCOLS		= new String[] { "SSLv3", "TLSv1", "TLSv1.1", "SSLv2Hello", };
