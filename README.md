@@ -15,7 +15,9 @@ It is a simple form of <http://postmarkapp.com/inbound>
 - Standalone
 - TLS Support
 - Email parsing to extract txt/plain, txt/html and binary attachments
-- Simple domain based email filtering
+- Multiple chained processors [backup -> postjson -> ...]
+- Domain based or Wildcard filtering
+- Per domain Rule
 
 
 ### Installation
@@ -33,8 +35,9 @@ It is a simple form of <http://postmarkapp.com/inbound>
 	# wget https://raw.github.com/aniljava/smtp2json/master/config.properties
 	
 	
-	-- Create an empty domains.txt file add domains you want to listen to	
-	# echo "" > domains.txt
+	-- Create atleast one configuration file
+	# mkdir config
+	# echo '{"domain":"domainname", "processors":[["postjson", "https://..remoteurl.."]]}'> config/domainname.json 	
 	
 	-- Run server as a background job	
     # java -jar smtp2json-1.0-jar-with-dependencies.jar &
@@ -79,9 +82,7 @@ Following fields are added
 Headers, To, From, Subject are copied as they are. Nested body's headers are copied in nexted body and named body0, body1 ...
 
 ### TODO
-1. Per address or per domain rules, Forwarding to URL, forwarding to Mailet (Which forwards to email, another SMTP Server ...)
-	address.txt to address.json {"domain":"example.com", "action":"smtp2json.POSTForward", "args": [["http://..."]]}
-2. Auto Reload Domain list
+2. Auto Reload Configuration Files
 3. Revise JSON Format for next version.
 
 
