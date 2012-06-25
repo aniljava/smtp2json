@@ -44,7 +44,29 @@ It is a simple form of <http://postmarkapp.com/inbound>
  
 
 ### Configuration
-See content of config.properties at <https://raw.github.com/aniljava/smtp2json/master/config.properties>
+There are two files that needs to be configured.
+
+1. config.properties
+It configures the actual server's information such as port numbers, ssl support. See config.properties for the details.
+
+2. processor config files
+Configures the email processing rules. These rules are defined as a json files inside config folder for each domain.
+Example of a processor config file.
+
+        {
+        	"domain":"reddit.com",
+        	"processors":[["logger"], ["backup", "backupdir"], ["postjson","https://..url"]]        	
+        }
+        
+#### Processors
+
+- logger: Logs each reques
+- backup: creates the backup of each email at given directory, argument backupdir required 
+- postjson : Creates json and forwards to given url.
+
+See smtp2json.processors package for details.
+
+
 
 ### JSON Format
 	{
