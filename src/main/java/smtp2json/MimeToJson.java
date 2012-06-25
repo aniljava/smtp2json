@@ -27,6 +27,15 @@ import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 
+import smtp2json.processors.PostJSON;
+
+/**
+ * Convert the mime message from inputstream to JSON String.
+ * 
+ * @see PostJSON for the usage.
+ * @author Anil Pathak
+ * 
+ */
 public class MimeToJson {
 	private Map<String, Object>	map	= new HashMap<String, Object>();
 
@@ -62,7 +71,7 @@ public class MimeToJson {
 				recieved.add(value);
 
 			} else {
-				map.put(name, value);				
+				map.put(name, value);
 			}
 		}
 
@@ -164,11 +173,112 @@ public class MimeToJson {
 			return "";
 		return buffer.toString();
 	}
-	
+
 	public static void main(String[] args) throws Exception {
 		MimeToJson mj = new MimeToJson(new FileInputStream("test-email.txt"));
 		String json = mj.getJson();
 		System.out.println(json);
+	}
+
+}
+
+class FieldParser {
+
+	public Map<String, String>	map	= new HashMap<>();
+	public List<String>		list	= new LinkedList<>();
+
+	@Override
+	public String toString() {
+		return "" + map + list;
+	}
+
+	public FieldParser(String raw) {
+		char[] chars = raw.toCharArray();
+		for (char c : chars) {
+			newchar(c);
+		}
+		terminate();
+	}
+
+	boolean	inName	= true;
+	String	name;
+	String	value;
+	boolean	quote;
+	boolean	escape;
+
+	void newchar(char c) {
+
+		if (escape) {
+			append(c);
+			escape = false;
+			return;
+		}
+
+		if (!quote && c == ';') {
+			terminate();
+			return;
+		}
+
+		if (!quote && c == '"') {
+			quote = true;
+			return;
+		}
+		
+		if(quote && !escape && c == '"'){
+			quote = false;
+			return;
+		}
+
+		if (!quote && c == '=') {
+			inName = false;
+			return;
+		}
+
+		if (c == '\\') {
+			escape = true;
+		}
+
+		if (c == '=') {
+			if (inName) {
+				inName = false;
+			}
+		}
+
+		append(c);
+
+	}
+
+	void append(char c) {
+		if (inName) {
+			if (name == null)
+				name = "";
+			name += c;
+		} else {
+			if (value == null)
+				value = "";
+			value += c;
+		}
+	}
+
+	void terminate() {
+		if (name != null) {
+			name = name.trim();
+		}
+		if (name == null) {
+			return;
+		}
+
+		if (value == null) {
+			list.add(name);
+		} else {
+			map.put(name, value);
+		}
+
+		name = null;
+		value = null;
+		quote = false;
+		inName = true;
+
 	}
 
 }

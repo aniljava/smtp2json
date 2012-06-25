@@ -13,7 +13,9 @@ import org.subethamail.smtp.RejectException;
 import org.subethamail.smtp.TooMuchDataException;
 
 /**
- * Handles individual Messages. Parses and calls web application.
+ * Handles individual Messages. Parses and calls web application. Called by the
+ * MailServer for each email. Responsible for calling processor dispatcher with
+ * inputstream, id and other info.
  * 
  * @author Anil Pathak
  * 
@@ -23,7 +25,7 @@ public class Mailet implements MessageHandler {
 	private String				from;
 	private String				to;
 	private String				domain;
-	private String				id = UUID.randomUUID().toString();
+	private String				id			= UUID.randomUUID().toString();
 	private ProcessorDispatcher	processor	= null;
 
 	public Mailet(ProcessorDispatcher filter) {
@@ -38,7 +40,7 @@ public class Mailet implements MessageHandler {
 	@Override
 	public void recipient(String to) throws RejectException {
 		this.domain = getDomain(to);
-		if (!processor.process(domain)) {
+		if (!processor.accept(domain)) {
 			throw new RejectException();
 		}
 		this.to = to;

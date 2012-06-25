@@ -14,14 +14,22 @@ import smtp2json.processors.Backup;
 import smtp2json.processors.Logger;
 import smtp2json.processors.PostJSON;
 
+/**
+ * Dispatches the incoming email to chain of different processors. Used by
+ * Mailet.
+ * 
+ * @author Anil Pathak
+ * 
+ */
 public class ProcessorDispatcher implements Processor {
 
 	private Map<String, List<List<String>>>	processors		= new HashMap<>();
 	private ObjectMapper					mapper			= new ObjectMapper();
-	private String							folderName;
+	private String							folderName		= "config";
 	private Map<String, Processor>			implementations	= new HashMap<>();
+	public long								reloadInterval	= -1;
 
-	public void initImplementations() {
+	public void createProcessorMap() {
 		implementations.put(Logger.NAME, new Logger());
 		implementations.put(Backup.NAME, new Backup());
 		implementations.put(PostJSON.NAME, new PostJSON());
@@ -29,19 +37,41 @@ public class ProcessorDispatcher implements Processor {
 		// TODO Allow dynamically loading of processor
 	}
 
+	private long	lastReloaded	= 0;
+
 	/**
-	 * Called by Mailet to check if given domain can be processed.
+	 * Checks if the configuration files needs to be reloaded.
+	 */
+	public void checkReload() {
+		if (reloadInterval != -1 && reloadInterval + lastReloaded > System.currentTimeMillis()) {
+			new Thread() {
+				public void run() {
+					try {
+						reloadConfig();
+					} catch (Exception ex) {
+						ex.printStackTrace();
+					}
+				}
+			}.start();
+		}
+	}
+
+	/**
+	 * Called by Mailet to check if given domain can be accepted.
 	 * 
 	 * @param domain
-	 * @return
+	 *            matching the domain name in the domain configuration file.
+	 * @return true if the domain name entry exist or a wild card entry exist.
 	 */
-	public boolean process(String domain) {		
-		List items = getProcessors(domain);		
-		if(items.isEmpty()){
-			items = processors.get("*");	
-		}	
-		
-		return !items.isEmpty();
+	public boolean accept(String domain) {
+		checkReload();
+
+		List items = processors.get(domain);
+
+		if (items == null) {
+			items = processors.get("*");
+		}
+		return (items != null);
 	}
 
 	@Override
@@ -72,11 +102,12 @@ public class ProcessorDispatcher implements Processor {
 
 	public void init(String folderName) throws Exception {
 		this.folderName = folderName;
-		initImplementations();
-		reload();
+		createProcessorMap();
+		reloadConfig();
 	}
 
-	public void reload() throws Exception {
+	public void reloadConfig() throws Exception {
+		lastReloaded = System.currentTimeMillis();
 		if (!new File(folderName).exists()) {
 			return;
 		}
@@ -97,17 +128,16 @@ public class ProcessorDispatcher implements Processor {
 				String domain = (String) data.get("domain");
 
 				List<List<String>> processorList = (List<List<String>>) tmp.get(domain);
-				if(processorList == null){
+				if (processorList == null) {
 					processorList = new LinkedList<List<String>>();
 					tmp.put(domain, processorList);
-				}				
-				
+				}
+
 				List<List<String>> newList = (List<List<String>>) data.get("processors");
 
 				for (List<String> list : newList) {
-					processorList.add(list);					
+					processorList.add(list);
 				}
-				
 			} catch (Exception ex) {
 				System.err.println(file + " : Could not be processed");
 				ex.printStackTrace(System.err);
@@ -116,27 +146,7 @@ public class ProcessorDispatcher implements Processor {
 		}
 
 		this.processors = tmp;
-		System.out.println(this.processors);
+
 	}
 
-	/**
-	 * Returns the list of processors registered, empty list otherwise
-	 * 
-	 * @param domain
-	 *            name
-	 * @return Empty list if does not exist
-	 */
-	public List<List<String>> getProcessors(String domainName) {
-		List<List<String>> result = processors.get(domainName);
-		if (result == null) {
-			return new LinkedList<>();
-		}
-		return result;
-	}
-
-	public static void main(String[] args) throws Exception {
-		ProcessorDispatcher processor = new ProcessorDispatcher();
-		processor.init("config");
-		// processor.reload();
-	}
 }
