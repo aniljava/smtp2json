@@ -44,7 +44,11 @@ public class MailServer implements MessageHandlerFactory {
 	public void start() throws Exception {
 		reloadConfiguration();
 
+		
 		String processorConfigDir = getConfiguration("processor_config_dir", "config");
+		String processorReloadInterval = getConfiguration("processor_reload_interval", "-1");
+		
+		processor.reloadInterval = Long.parseLong(processorReloadInterval);
 		processor.init(processorConfigDir);
 
 		SMTPServer server = null;
