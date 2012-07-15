@@ -7,8 +7,6 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.iharder.Base64;
-
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -29,7 +27,7 @@ import smtp2json.Processor;
  * 1. URL: URL Where the JSON and RAW MIME is posted. A valid url that accepts
  * [data,id,raw] parameters on POST request. e.g. ["postjson","https://..url",
  * "true"]<br>
- * 2. INCLUDERAW : Boolean value, true if raw data encoded in base64 is to be
+ * 2. INCLUDERAW : Boolean value, true if raw is to be
  * passed as a raw parameter. <br>
  * 
  * RESULT:<br>
@@ -81,7 +79,7 @@ public class PostJSON implements Processor {
 			formparams.add(new BasicNameValuePair("id", id));
 
 			if (includeRaw) {
-				String raw = Base64.encodeBytes(data);
+				String raw = new String(data);
 				formparams.add(new BasicNameValuePair("raw", raw));
 			}
 
