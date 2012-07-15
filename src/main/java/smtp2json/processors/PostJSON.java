@@ -1,9 +1,13 @@
 package smtp2json.processors;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+
+import net.iharder.Base64;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -18,28 +22,54 @@ import org.codehaus.jackson.map.ObjectMapper;
 import smtp2json.MimeToJson;
 import smtp2json.Processor;
 
+/**
+ * Transforms the MIME message to JSON and posts to the given URL. <br>
+ * 
+ * ARGUMENTS:<br>
+ * 1. URL: URL Where the JSON and RAW MIME is posted. A valid url that accepts
+ * [data,id,raw] parameters on POST request. e.g. ["postjson","https://..url",
+ * "true"]<br>
+ * 2. INCLUDERAW : Boolean value, true if raw data encoded in base64 is to be
+ * passed as a raw parameter. <br>
+ * 
+ * RESULT:<br>
+ * Returns a copy of input stream.
+ * 
+ * @author Anil Pathak
+ * 
+ */
 public class PostJSON implements Processor {
 
 	final static ObjectMapper	mapper		= new ObjectMapper();
 
 	public static final String	NAME		= "postjson";
 
-	
-	DefaultHttpClient				httpclient	= new DefaultHttpClient(new PoolingClientConnectionManager());
-
+	DefaultHttpClient			httpclient	= new DefaultHttpClient(new PoolingClientConnectionManager());
 
 	@Override
 	public String getName() {
 		return NAME;
 	}
-	
+
 	@Override
 	public Object process(Object chainEnd, String domain, String from, String to, String id, List<String> args) throws Exception {
 
-		String url = args.get(1);
+		final String url = args.get(1);
+		final boolean includeRaw = (args.size() > 1) ? Boolean.parseBoolean(args.get(2)) : false;
+
 		InputStream in = (InputStream) chainEnd;
 
-		MimeToJson jsonParser = new MimeToJson(in);
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		int i;
+		while ((i = in.read()) != -1) {
+			out.write(i);
+		}
+		out.close();
+		in.close();
+
+		final byte[] data = out.toByteArray();
+
+		MimeToJson jsonParser = new MimeToJson(new ByteArrayInputStream(data));
 
 		try {
 
@@ -50,18 +80,23 @@ public class PostJSON implements Processor {
 			formparams.add(new BasicNameValuePair("data", json));
 			formparams.add(new BasicNameValuePair("id", id));
 
+			if (includeRaw) {
+				String raw = Base64.encodeBytes(data);
+				formparams.add(new BasicNameValuePair("raw", raw));
+			}
+
 			UrlEncodedFormEntity entity = new UrlEncodedFormEntity(formparams, Charset.defaultCharset().name());
 			post.setHeader("Content-Type", "application/x-www-form-urlencoded");
 			post.setEntity(entity);
 
 			HttpResponse response = httpclient.execute(post);
 			EntityUtils.toString(response.getEntity());
-			
+
 			return json;
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
 
-		return null;
+		return new ByteArrayInputStream(data);
 	}
 }

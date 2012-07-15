@@ -39,10 +39,12 @@ public class Mailet implements MessageHandler {
 
 	@Override
 	public void recipient(String to) throws RejectException {
+		System.out.println("Checking : " + to);
 		this.domain = getDomain(to);
 		if (!processor.accept(domain)) {
 			throw new RejectException();
 		}
+		System.out.println("Accepted : " + to);
 		this.to = to;
 	}
 

@@ -55,7 +55,7 @@ Example of a processor config file.
 
         {
         	"domain":"reddit.com",
-        	"processors":[["logger"], ["backup", "backupdir"], ["postjson","https://..url"]]        	
+        	"processors":[["logger"], ["backup", "backupdir"], ["postjson","https://..url", "true"]]        	
         }
         
 #### Processors
@@ -107,4 +107,6 @@ Headers, To, From, Subject are copied as they are. Nested body's headers are cop
 2. Auto Reload Configuration Files
 3. Revise JSON Format for next version.
 
+### CHANGES
+- Added raw support
 
