@@ -6,16 +6,21 @@ import java.util.UUID;
 
 import javax.mail.internet.InternetAddress;
 
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.subethamail.smtp.MessageHandler;
 import org.subethamail.smtp.RejectException;
 import org.subethamail.smtp.TooMuchDataException;
 
 /**
- * Handles individual Messages. Parses and calls web application. Called by the
- * MailServer for each email. Responsible for calling processor dispatcher with
- * inputstream, id and other info.
+ * The Main mail server creates a seperate thread per connection. A new instance
+ * of this class is created every such time.
+ * 
+ * The responsibility of this class is to use shared ProcessorDispatcher
+ * instance to check if the email can be accepted. If yes, forward the incoming
+ * message which is in form if InputStream to the ProcessorDispatcher.
+ * 
+ * This class creates a UUID for each incoming message and passes to
+ * ProcessorDispatcher.
+ * 
  * 
  * @author Anil Pathak
  * 
@@ -24,8 +29,7 @@ public class Mailet implements MessageHandler {
 
 	private String				from;
 	private String				to;
-	private String				domain;
-	private String				id			= UUID.randomUUID().toString();
+	private String				domain;	
 	private ProcessorDispatcher	processor	= null;
 
 	public Mailet(ProcessorDispatcher filter) {
@@ -39,20 +43,15 @@ public class Mailet implements MessageHandler {
 
 	@Override
 	public void recipient(String to) throws RejectException {
-		System.out.println("Checking : " + to);
 		this.domain = getDomain(to);
-		if (!processor.accept(domain)) {
-			throw new RejectException();
-		}
-		System.out.println("Accepted : " + to);
+		if (!processor.accept(domain)) throw new RejectException();
 		this.to = to;
 	}
-
-	MimeToJson	jsonParser;
 
 	@Override
 	public void data(InputStream in) throws RejectException, TooMuchDataException, IOException {
 		try {
+			String id = UUID.randomUUID().toString();
 			processor.process(in, domain, from, to, id, null);
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -61,20 +60,20 @@ public class Mailet implements MessageHandler {
 
 	}
 
-	DefaultHttpClient			httpclient	= new DefaultHttpClient();
-	final static ObjectMapper	mapper		= new ObjectMapper();
-
 	@Override
 	public void done() {
-		// DONE !!
+		/** SINCE NOTHING IS TO BE DONE THIS METHOD IS LEFT BLANK **/
 	}
 
+	/**
+	 * Return the domain part of the email address. Throws RuntimeException for
+	 * malformed email addresses.
+	 */
 	private static String getDomain(String email) {
 		try {
 			InternetAddress emailAddr = new InternetAddress(email);
 			String domain = emailAddr.getAddress().toString();
 			domain = domain.substring(domain.indexOf("@") + 1);
-
 			return domain;
 		} catch (Exception ex) {
 			throw new RuntimeException(email + "NOT VALIDATED");
