@@ -43,9 +43,9 @@ public class Mailet implements MessageHandler {
 
 	@Override
 	public void recipient(String to) throws RejectException {
-		this.domain = getDomain(to);
-		if (!processor.accept(domain)) throw new RejectException();
-		this.to = to;
+		this.to = to.toLowerCase();
+		this.domain = getDomain(this.to);
+		if (!processor.accept(this.domain)) throw new RejectException();
 	}
 
 	@Override
@@ -71,6 +71,8 @@ public class Mailet implements MessageHandler {
 	 */
 	private static String getDomain(String email) {
 		try {
+			email = email.toLowerCase();			
+			
 			InternetAddress emailAddr = new InternetAddress(email);
 			String domain = emailAddr.getAddress().toString();
 			domain = domain.substring(domain.indexOf("@") + 1);
